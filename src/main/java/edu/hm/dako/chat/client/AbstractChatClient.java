@@ -47,6 +47,7 @@ public abstract class AbstractChatClient implements ClientCommunication {
 	// Kennzeichen zum Beenden der Bearbeitung
 	protected boolean finished = false;
 
+	public abstract void executeTest();
 
 	@Override
 	public void login(String name) throws IOException {
@@ -105,8 +106,7 @@ public abstract class AbstractChatClient implements ClientCommunication {
 		try {
 			session.getBasicRemote().sendObject(pdu);
 		} catch (IOException | EncodeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error(e.getMessage());
 		}
 	}
 

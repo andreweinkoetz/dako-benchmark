@@ -37,9 +37,9 @@ import edu.hm.dako.chat.common.ClientConversationStatus;
  */
 
 @ClientEndpoint(encoders = { ChatPDUEncoder.class }, decoders = { ChatPDUDecoder.class })
-public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
+public class BenchmarkingClientImplSimple extends AbstractChatClient {
 
-	private static Log log = LogFactory.getLog(BenchmarkingClientImplAdvanced.class);
+	private static Log log = LogFactory.getLog(BenchmarkingClientImplSimple.class);
 
 	/*
 	 * Parameter fuer den Benchmarking-Lauf
@@ -88,7 +88,7 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 	 * @throws IOException
 	 * @throws DeploymentException
 	 */
-	public BenchmarkingClientImplAdvanced(URI uri, int messageLength, int numberOfMessages, int clientThinkTime,
+	public BenchmarkingClientImplSimple(URI uri, int messageLength, int numberOfMessages, int clientThinkTime,
 			int numberOfClient, String resultPath) {
 
 		this.messageLength = messageLength;
@@ -186,11 +186,12 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 			// Logout ausfuehren und warten, bis Server bestaetigt
 			this.logout(threadName);
+
 			while (this.status != ClientConversationStatus.UNREGISTERED) {
 				Thread.sleep(1);
 			}
 
-			// TODO: Nachbearbeitung fuer die Statistik
+			// Nachbearbeitung fuer die Statistik
 			log.debug("User " + userName + " beim Server abgemeldet");
 			printStatistic();
 
@@ -198,22 +199,25 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 			session.close();
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.error(e.getMessage());
 		}
+
 	}
 
 	private void printStatistic() {
 
-		Result r = new Result("Advanced", userName, eventCounter.get(), messageCounter.get(), loginEvents.get(),
+		log.debug("Client bereitet Ausgabe vor");
+
+		Result r = new Result("Simple", userName, eventCounter.get(), messageCounter.get(), loginEvents.get(),
 				logoutEvents.get(), chatPduRtt);
 
 		ObjectMapper mapper = new ObjectMapper();
 		String jsonInString = "";
-
+		
 		try {
 			jsonInString = mapper.writeValueAsString(r);
 		} catch (JsonProcessingException e1) {
-			log.error(e1.getMessage());
+			e1.printStackTrace();
 		}
 
 		Path p = Paths.get(resultPath + userName + ".txt");
@@ -231,6 +235,7 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	/**
@@ -320,75 +325,6 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 		log.debug("MessageEventCounter: " + events);
 
-		// ADVANCED_CHAT:Chat-Message-Event bestaetigen
-		confirmChatMessageEvent(receivedPdu);
-
-		// ADVANCED_CHAT:ConfirmCounter erhoehen
-		this.confirmCounter.getAndIncrement();
-
-	}
-
-	/**
-	 * ADVANCED_CHAT: Bestaetigung fuer eine Chat-Event-Message-PDU an Server senden
-	 * 
-	 * @param receivedPdu
-	 *            Empfangene Chat-Event-Message-PDU
-	 * @throws Exception
-	 */
-	private void confirmChatMessageEvent(ChatPDU receivedPdu) {
-
-		ChatPDU responsePdu = ChatPDU.createChatMessageEventConfirm(userName, receivedPdu);
-
-		try {
-			sendPduToServer(userName, responsePdu);
-			log.debug("Chat-Message-Event-Confirm-PDU fuer " + receivedPdu.getUserName()
-					+ " bzgl. eines urspruenglichonapaen Events von " + receivedPdu.getEventUserName()
-					+ " an den Server gesendet");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * ADVANCED_CHAT:Bestaetigung fuer eine Login-Event-PDU an Server senden
-	 * 
-	 * @param receivedPdu
-	 *            Empfangene Chat-Event-Message-PDU
-	 * @throws Exception
-	 */
-	private void confirmLoginEvent(ChatPDU receivedPdu) {
-
-		ChatPDU responsePdu = ChatPDU.createLoginEventConfirm(userName, receivedPdu);
-
-		try {
-			sendPduToServer(userName, responsePdu);
-			log.debug("Login-Event-Confirm-PDU fuer " + receivedPdu.getUserName()
-					+ " bzgl. eines urspruenglichen Events von " + receivedPdu.getEventUserName()
-					+ " an den Server gesendet");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * ADVANCED_CHAT: Bestaetigung fuer eine Logout-Event-PDU an Server senden
-	 * 
-	 * @param receivedPdu
-	 *            Empfangene Chat-Event-Message-PDU
-	 * @throws Exception
-	 */
-	private void confirmLogoutEvent(ChatPDU receivedPdu) {
-
-		ChatPDU responsePdu = ChatPDU.createLogoutEventConfirm(userName, receivedPdu);
-
-		try {
-			sendPduToServer(userName, responsePdu);
-			log.debug("Logout-Event-Confirm-PDU fuer " + receivedPdu.getUserName()
-					+ " bzgl. eines urspruenglichen Events von " + receivedPdu.getEventUserName()
-					+ " an den Server gesendet");
-		} catch (Exception e) {
-			log.error(e.getMessage());
-		}
 	}
 
 	@Override
@@ -422,12 +358,6 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 		log.debug(this.userName + " erhaelt LoginEvent, LoginEventCounter: " + events);
 
-		// ADVANCED_CHAT: Bestaetigung senden
-		confirmLoginEvent(receivedPdu);
-
-		// ADVANCED_CHAT:ConfirmCounter erhoehen
-		this.confirmCounter.getAndIncrement();
-
 	}
 
 	@Override
@@ -441,11 +371,6 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 		log.debug("LogoutEventCounter: " + events);
 
-		// ADVANCED_CHAT: Bestaetigung senden
-		confirmLogoutEvent(receivedPdu);
-
-		// ADVANCED_CHAT: Confirmation-Zaehler erhoehen
-		this.confirmCounter.getAndIncrement();
 	}
 
 	@Override

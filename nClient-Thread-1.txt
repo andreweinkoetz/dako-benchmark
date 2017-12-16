@@ -1,0 +1,1 @@
+{"userName":"Client-Thread-1","implementation":"Advanced","totalEvents":12,"sendMessages":10,"loginEvents":1,"logoutEvents":1,"chatPduRtt":[38096574,36054344,32291039,28153926,31992028,27689966,48539195,29099322,23740627,20551113]}
