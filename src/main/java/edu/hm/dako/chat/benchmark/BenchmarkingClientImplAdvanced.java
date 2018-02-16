@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ContainerProvider;
@@ -14,7 +15,6 @@ import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
-import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
 import org.apache.commons.logging.Log;
@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import edu.hm.dako.chat.client.AbstractChatClient;
 import edu.hm.dako.chat.common.ChatPDU;
 import edu.hm.dako.chat.common.ChatPDUDecoder;
 import edu.hm.dako.chat.common.ChatPDUEncoder;
@@ -40,7 +39,7 @@ import edu.hm.dako.chat.common.ClientConversationStatus;
 public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 	private static Log log = LogFactory.getLog(BenchmarkingClientImplAdvanced.class);
-
+	
 	/*
 	 * Parameter fuer den Benchmarking-Lauf
 	 */
@@ -48,13 +47,18 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 	protected int numberOfMessagesToSend;
 	protected int clientThinkTime;
 
+	// Pfad zur Ablage der Ergebnis-Logs
 	protected String resultPath;
 
 	// Kennzeichen, ob zuletzt erwartete Chat-Response-PDU des Clients
 	// angekommen ist
 	private AtomicBoolean chatResponseReceived = new AtomicBoolean();
 
+	
+	// Array zur Ablage aller RTTs für Ergebnis-Log
 	private long[] chatPduRtt;
+	// Liste der Serverzeiten
+	private ArrayList<Long> serverTime;
 
 	/**
 	 * Konstruktor fuer Benchmarking
@@ -95,6 +99,7 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 		this.numberOfMessagesToSend = numberOfMessages;
 		this.clientThinkTime = clientThinkTime;
 		this.chatPduRtt = new long[numberOfMessagesToSend];
+		this.serverTime = new ArrayList<>();
 		this.resultPath = resultPath;
 
 		Thread.currentThread().setName("Client-Thread-" + numberOfClient);
@@ -103,22 +108,31 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 		WebSocketContainer client = ContainerProvider.getWebSocketContainer();
 		try {
 			this.session = client.connectToServer(this, uri);
-		} catch (DeploymentException | IOException e) {
+			} catch (DeploymentException | IOException e) {
 			log.error(e.getMessage());
 		}
 
 	}
 
+	/**
+	 * Callback-Methode bei Verbindungsaufbau
+	 */
 	@OnOpen
-	public void onOpen(Session session) {
+	public void onOpen() {
 		log.debug("Session geoeffnet. Wurde durch connectToServer-Methode ausgelöst");
 	}
 
+	/**
+	 * Callback-Methode bei Verbindungsfehler
+	 */
 	@OnError
 	public void onError(Throwable t) {
 		log.error("Kommunikation wurde unerwartet abgebrochen: " + t.getMessage());
 	}
 
+	/**
+	 * Callback-Methode bei Verbindungsabbau
+	 */
 	@OnClose
 	public void onClose() {
 		if (this.status != ClientConversationStatus.UNREGISTERED) {
@@ -132,13 +146,16 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 		System.exit(1);
 	}
 
+	/**
+	 * Callback-Methode zur Verarbeitung eintreffender Nachrichten
+	 */
 	@OnMessage
 	public void onMessage(ChatPDU receivedPdu) {
 		handleIncomingPdu(receivedPdu);
 	}
 
 	/**
-	 * Thread zur Simulation eines Chat-Users: User wird beim Server registriert,
+	 * User wird beim Server registriert,
 	 * alle Requests werden gesendet, Antworten werden gelesen und am Ende wird ein
 	 * Logout ausgefuehrt. Der Vorgang wird abprupt abgebrochen, wenn dies ueber die
 	 * GUI gewuenscht wird.
@@ -165,7 +182,7 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 			int i = 0;
 			while (i < numberOfMessagesToSend) {
 
-				log.debug(userName + " sendet die " + i + ". Nachricht - mit Thread: "
+				log.debug(userName + " sendet die " + i+ ". Nachricht - mit Thread: "
 						+ Thread.currentThread().getName());
 
 				sendMessageAndWaitForAck(i);
@@ -202,10 +219,17 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 		}
 	}
 
+	/**
+	 * Erstellt die Ergebnis-Logs
+	 */
 	private void printStatistic() {
 
+		Long[] serverTimes = new Long[serverTime.size()];
+		serverTimes = serverTime.toArray(serverTimes);
+		
+		
 		Result r = new Result("Advanced", userName, eventCounter.get(), messageCounter.get(), loginEvents.get(),
-				logoutEvents.get(), chatPduRtt);
+				logoutEvents.get(), chatPduRtt, serverTimes);
 
 		ObjectMapper mapper = new ObjectMapper();
 		String jsonInString = "";
@@ -217,7 +241,7 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 		}
 
 		Path p = Paths.get(resultPath + userName + ".txt");
-
+		
 		if (!Files.exists(p)) {
 			try {
 				Files.createFile(p);
@@ -282,6 +306,7 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 			// Response in Statistik aufnehmen
 			chatPduRtt[i] = System.nanoTime() - rttStartTime;
+			
 			log.debug(userName + ": RTT fuer Nachricht" + i + ": " + chatPduRtt[i]);
 
 		} catch (Exception e) {
@@ -297,6 +322,8 @@ public class BenchmarkingClientImplAdvanced extends AbstractChatClient {
 
 		if (receivedPdu.getSequenceNumber() == this.messageCounter.get()) {
 
+			serverTime.add(receivedPdu.getServerTime());
+			
 			chatResponseReceived.set(true);
 			notifyAll();
 

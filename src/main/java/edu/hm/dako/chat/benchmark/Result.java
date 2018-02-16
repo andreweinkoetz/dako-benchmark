@@ -1,23 +1,52 @@
 package edu.hm.dako.chat.benchmark;
 
+/**
+ * Repräsentiert das Ergebnis eines Durchlaufs des Benchmark-Clients.
+ * Wird als JSON-String in einem Ergebnis-Logfile abgelegt.
+ * 
+ * @author Andre Weinkötz
+ *
+ */
 public class Result {
 	
+	// Benchmark-Client
 	private String userName;
+	// Impl.-Variante
 	private String implementation;
 
+	// Anzahl Events gesamt
 	private int totalEvents;
+	// Anzahl Nachrichten
 	private int sendMessages;
 
+	//Anzahl Login/Logout-Events
 	private int loginEvents;
 	private int logoutEvents;
 
+	// RTTs und Serverzeiten
 	private long[] chatPduRtt;
+	private Long[] serverTime;
 
+	/**
+	 * Benötigt für Enkodierung/Dekodierung
+	 */
 	public Result() {
 	}
 
+	/**
+	 * Konstruktor
+	 * 
+	 * @param implementation
+	 * @param userName
+	 * @param totalEvents
+	 * @param sendMessages
+	 * @param loginEvents
+	 * @param logoutEvents
+	 * @param chatPduRtt
+	 * @param serverTime
+	 */
 	public Result(String implementation, String userName, int totalEvents, int sendMessages, int loginEvents,
-			int logoutEvents, long[] chatPduRtt) {
+			int logoutEvents, long[] chatPduRtt, Long[] serverTime) {
 		this.implementation = implementation;
 		this.userName = userName;
 		this.totalEvents = totalEvents;
@@ -25,6 +54,7 @@ public class Result {
 		this.loginEvents = loginEvents;
 		this.logoutEvents = logoutEvents;
 		this.chatPduRtt = chatPduRtt;
+		this.serverTime = serverTime;
 		
 	}
 
@@ -82,6 +112,14 @@ public class Result {
 
 	public void setLogoutEvents(int logoutEvents) {
 		this.logoutEvents = logoutEvents;
+	}
+
+	public Long[] getServerTime() {
+		return serverTime;
+	}
+
+	public void setServerTime(Long[] serverTime) {
+		this.serverTime = serverTime;
 	}
 
 }

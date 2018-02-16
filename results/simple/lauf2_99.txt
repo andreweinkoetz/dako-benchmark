@@ -1,0 +1,7 @@
+Ergebnisse des Simple-Tests vom: 	03.02.2018
+Anzahl Clients: 				99
+Insgesamt gesendete Nachrichten: 	990
+Min. RTT: 				15 ms
+Max. RTT: 				41633 ms
+Durchs. RTT: 				8710 ms
+

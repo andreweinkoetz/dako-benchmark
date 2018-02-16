@@ -7,5 +7,5 @@ package edu.hm.dako.chat.common;
  */
 
 public enum ImplementationType {
-  TCPAdvancedImplementation, TCPSimpleImplementation, UDPAdvancedImplementation,
+  TCPAdvancedImplementation, TCPSimpleImplementation
 }

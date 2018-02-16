@@ -1,0 +1,7 @@
+Ergebnisse des Advanced-Tests vom: 	03.02.2018
+Anzahl Clients: 				90
+Insgesamt gesendete Nachrichten: 	900
+Min. RTT: 				9 ms
+Max. RTT: 				33644 ms
+Durchs. RTT: 				12531 ms
+
